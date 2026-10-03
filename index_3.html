@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attendance</title>
+<style>
+  :root{--bg:#f5f7fb;--card:#fff;--ink:#1f2937;--mute:#6b7280;--brand:#2563eb;--ok:#16a34a;--no:#dc2626;--line:#e5e7eb}
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:var(--brand);color:#fff;padding:16px;text-align:center;font-size:20px;font-weight:600}
+  main{max-width:640px;margin:0 auto;padding:16px}
+  .tabs{display:flex;gap:8px;margin-bottom:16px}
+  .tabs button{flex:1;padding:12px;border:0;border-radius:10px;background:#dbe4f7;color:var(--brand);font-weight:600;font-size:16px;cursor:pointer}
+  .tabs button.on{background:var(--brand);color:#fff}
+  .card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  h2{margin:0 0 12px;font-size:18px}
+  label{display:block;font-size:14px;color:var(--mute);margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff}
+  textarea{min-height:90px}
+  .btn{display:inline-block;padding:12px 18px;border:0;border-radius:10px;background:var(--brand);color:#fff;font:600 16px inherit;cursor:pointer;margin-top:12px}
+  .btn.alt{background:#e5e7eb;color:var(--ink)}
+  .btn.full{width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row>*{flex:1}
+  .stu{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+  .stu:last-child{border:0}
+  .stu small{color:var(--mute);display:block}
+  .tog{display:flex;gap:6px}
+  .tog button{width:52px;height:44px;border-radius:10px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:16px;cursor:pointer}
+  .tog button.p.on{background:var(--ok);border-color:var(--ok);color:#fff}
+  .tog button.a.on{background:var(--no);border-color:var(--no);color:#fff}
+  .big{font-size:42px;font-weight:700;text-align:center;margin:4px 0}
+  .bar{height:12px;background:#e5e7eb;border-radius:8px;overflow:hidden}
+  .bar>div{height:100%;background:var(--ok)}
+  .chip{display:inline-block;min-width:92px;margin:4px;padding:6px 10px;border-radius:8px;font-size:14px;text-align:center}
+  .chip.P{background:#dcfce7;color:#166534}.chip.A{background:#fee2e2;color:#991b1b}
+  .msg{padding:10px 12px;border-radius:10px;margin-top:12px;font-size:15px}
+  .msg.err{background:#fee2e2;color:#991b1b}.msg.ok{background:#dcfce7;color:#166534}
+  .mute{color:var(--mute);font-size:14px}
+  .hide{display:none}
+  details summary{cursor:pointer;font-weight:600;padding:6px 0}
+</style>
+</head>
+<body>
+<header>📋 Class Attendance</header>
+<main>
+  <div class="tabs">
+    <button id="tabS" class="on" onclick="show('S')">I'm a Student</button>
+    <button id="tabT" onclick="show('T')">I'm a Teacher</button>
+  </div>
+
+  <!-- STUDENT -->
+  <section id="S">
+    <div class="card">
+      <h2>Check my attendance</h2>
+      <label>Course code</label>
+      <input id="sCode" placeholder="e.g. math101" autocapitalize="off">
+      <label>My roll / student ID</label>
+      <input id="sRoll" placeholder="e.g. 23">
+      <label>Course passcode (given by your teacher)</label>
+      <input id="sPass" type="password" placeholder="••••••">
+      <button class="btn full" onclick="studentView()">Show my attendance</button>
+      <div id="sMsg"></div>
+    </div>
+    <div id="sOut" class="card hide"></div>
+  </section>
+
+  <!-- TEACHER -->
+  <section id="T" class="hide">
+    <div id="lock" class="card">
+      <h2 id="lockTitle">Teacher login</h2>
+      <label id="lockLabel">PIN</label>
+      <input id="pin" type="password" inputmode="numeric" placeholder="PIN">
+      <button class="btn full" onclick="unlock()">Continue</button>
+      <div id="lockMsg"></div>
+      <p class="mute">Your data is stored in this browser. Use "Publish" to share it with students.</p>
+    </div>
+
+    <div id="panel" class="hide">
+      <div class="card">
+        <h2>My courses</h2>
+        <select id="courseSel" onchange="pickCourse()"></select>
+        <details>
+          <summary>➕ Add a new course</summary>
+          <label>Course name</label><input id="cName" placeholder="Mathematics 101">
+          <label>Course code (letters/numbers, no spaces)</label><input id="cCode" placeholder="math101" autocapitalize="off">
+          <label>Student passcode (share with this course's students)</label><input id="cPass" placeholder="e.g. blue42">
+          <button class="btn" onclick="addCourse()">Add course</button>
+        </details>
+      </div>
+
+      <div id="courseArea" class="hide">
+        <div class="card">
+          <h2>Mark attendance</h2>
+          <label>Date</label><input id="date" type="date" onchange="renderMark()">
+          <div class="row">
+            <button class="btn alt" onclick="markAll('P')">All present</button>
+            <button class="btn alt" onclick="markAll('A')">All absent</button>
+          </div>
+          <div id="list"></div>
+          <button class="btn full" onclick="saveDay()">💾 Save attendance</button>
+          <div id="tMsg"></div>
+        </div>
+
+        <div class="card">
+          <h2>Students</h2>
+          <details>
+            <summary>➕ Add students</summary>
+            <label>One per line: roll, name</label>
+            <textarea id="bulk" placeholder="1, Anika Rahman&#10;2, Rafi Hasan"></textarea>
+            <button class="btn" onclick="addStudents()">Add</button>
+          </details>
+          <details>
+            <summary>🗑 Remove a student</summary>
+            <select id="rmSel"></select>
+            <button class="btn alt" onclick="rmStudent()">Remove</button>
+          </details>
+        </div>
+
+        <div class="card">
+          <h2>Share with students</h2>
+          <p class="mute">Click Publish, then upload the downloaded file into the <b>data</b> folder of your GitHub repo. Students see only their own record, and only for this course.</p>
+          <button class="btn full" onclick="publish()">⬆ Publish this course</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Backup</h2>
+        <div class="row">
+          <button class="btn alt" onclick="backup()">Download backup</button>
+          <button class="btn alt" onclick="document.getElementById('rest').click()">Restore backup</button>
+        </div>
+        <input id="rest" type="file" accept=".json" class="hide" onchange="restore(event)">
+        <button class="btn alt" style="margin-top:12px" onclick="lockOut()">Log out</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const enc = new TextEncoder(), dec = new TextDecoder();
+let DB = JSON.parse(localStorage.getItem('attd') || '{"pin":null,"courses":[]}');
+let cur = null; // current course
+let marks = {}; // roll -> P/A for chosen date
+const save = () => localStorage.setItem('attd', JSON.stringify(DB));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const msg = (el, t, k) => $(el).innerHTML = t ? `<div class="msg ${k}">${esc(t)}</div>` : '';
+
+function show(w){
+  $('S').classList.toggle('hide', w!=='S'); $('T').classList.toggle('hide', w!=='T');
+  $('tabS').classList.toggle('on', w==='S'); $('tabT').classList.toggle('on', w==='T');
+  if (w==='T') initLock();
+}
+
+/* ---------- crypto ---------- */
+const b64 = u => btoa(String.fromCharCode(...u));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function sha(s){ return [...new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(s)))].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+async function deriveKey(pass, roll, salt){
+  const base = await crypto.subtle.importKey('raw', enc.encode(pass+':'+roll), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:100000, hash:'SHA-256'}, base, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+
+/* ---------- student ---------- */
+async function studentView(){
+  const code = $('sCode').value.trim().toLowerCase(), roll = $('sRoll').value.trim(), pass = $('sPass').value;
+  $('sOut').classList.add('hide');
+  if (!code || !roll || !pass) return msg('sMsg','Please fill in all three boxes.','err');
+  msg('sMsg','Loading…','ok');
+  try{
+    const r = await fetch(`data/${encodeURIComponent(code)}.json?t=${Date.now()}`);
+    if (!r.ok) throw new Error('nocourse');
+    const f = await r.json();
+    const e = f.entries[await sha(code+':'+roll)];
+    if (!e) throw new Error('bad');
+    const key = await deriveKey(pass, roll, unb64(f.salt));
+    const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv:unb64(e.iv)}, key, unb64(e.ct));
+    const d = JSON.parse(dec.decode(plain));
+    msg('sMsg','');
+    renderStudent(f, d);
+  }catch(err){
+    msg('sMsg', err.message==='nocourse' ? 'Course not found. Check the course code.' : 'Wrong roll or passcode. Please try again.', 'err');
+  }
+}
+function renderStudent(f, d){
+  const dates = Object.keys(d.records).sort().reverse();
+  const p = dates.filter(x=>d.records[x]==='P').length, t = dates.length;
+  const pct = t ? Math.round(p/t*100) : 0;
+  $('sOut').innerHTML = `
+    <h2>Hi ${esc(d.name)} 👋</h2>
+    <p class="mute" style="margin-top:-8px">${esc(f.course)} · updated ${esc(f.updated)}</p>
+    <div class="big" style="color:${pct>=75?'var(--ok)':'var(--no)'}">${pct}%</div>
+    <div class="bar"><div style="width:${pct}%"></div></div>
+    <p class="mute" style="text-align:center">${p} present out of ${t} classes</p>
+    <div>${dates.map(x=>`<span class="chip ${d.records[x]}">${esc(x)}<br>${d.records[x]==='P'?'✔ Present':'✘ Absent'}</span>`).join('') || '<p class="mute">No classes recorded yet.</p>'}</div>`;
+  $('sOut').classList.remove('hide');
+}
+
+/* ---------- teacher ---------- */
+let unlocked = false;
+function initLock(){
+  if (unlocked) return;
+  const first = !DB.pin;
+  $('lockTitle').textContent = first ? 'Set a teacher PIN' : 'Teacher login';
+  $('lockLabel').textContent = first ? 'Choose a PIN (4+ digits)' : 'PIN';
+}
+function unlock(){
+  const v = $('pin').value.trim();
+  if (!DB.pin){
+    if (v.length < 4) return msg('lockMsg','PIN needs at least 4 characters.','err');
+    DB.pin = v; save();
+  } else if (v !== DB.pin) return msg('lockMsg','Wrong PIN.','err');
+  unlocked = true; $('pin').value=''; msg('lockMsg','');
+  $('lock').classList.add('hide'); $('panel').classList.remove('hide');
+  $('date').value = new Date().toLocaleDateString('en-CA');
+  renderCourses();
+}
+function lockOut(){ unlocked=false; $('panel').classList.add('hide'); $('lock').classList.remove('hide'); initLock(); }
+
+function renderCourses(keep){
+  const s = $('courseSel');
+  s.innerHTML = '<option value="">— choose a course —</option>' + DB.courses.map(c=>`<option value="${esc(c.code)}">${esc(c.name)} (${esc(c.code)})</option>`).join('');
+  if (keep) s.value = keep;
+  pickCourse();
+}
+function pickCourse(){
+  cur = DB.courses.find(c=>c.code===$('courseSel').value) || null;
+  $('courseArea').classList.toggle('hide', !cur);
+  if (cur){ renderMark(); renderRemove(); }
+}
+function addCourse(){
+  const name=$('cName').value.trim(), code=$('cCode').value.trim().toLowerCase(), pass=$('cPass').value;
+  if (!name || !/^[a-z0-9_-]+$/.test(code) || pass.length<4) return alert('Enter a name, a code (letters/numbers only) and a passcode of 4+ characters.');
+  if (DB.courses.some(c=>c.code===code)) return alert('That course code already exists.');
+  DB.courses.push({name, code, pass, students:[], records:{}}); save();
+  $('cName').value=$('cCode').value=$('cPass').value='';
+  renderCourses(code);
+}
+function addStudents(){
+  if (!cur) return;
+  $('bulk').value.split('\n').forEach(l=>{
+    const i = l.indexOf(','); if (i<0) return;
+    const roll = l.slice(0,i).trim(), name = l.slice(i+1).trim();
+    if (!roll || !name) return;
+    const ex = cur.students.find(s=>s.roll===roll);
+    if (ex) ex.name = name; else cur.students.push({roll, name});
+  });
+  cur.students.sort((a,b)=>a.roll.localeCompare(b.roll,undefined,{numeric:true}));
+  save(); $('bulk').value=''; renderMark(); renderRemove();
+}
+function renderRemove(){ $('rmSel').innerHTML = cur.students.map(s=>`<option value="${esc(s.roll)}">${esc(s.roll)} – ${esc(s.name)}</option>`).join(''); }
+function rmStudent(){
+  const r=$('rmSel').value; if(!r || !confirm('Remove this student and their records?')) return;
+  cur.students = cur.students.filter(s=>s.roll!==r);
+  Object.values(cur.records).forEach(d=>delete d[r]);
+  save(); renderMark(); renderRemove();
+}
+function renderMark(){
+  if (!cur) return;
+  const day = cur.records[$('date').value] || {};
+  marks = {...day};
+  draw();
+}
+function draw(){
+  $('list').innerHTML = cur.students.length ? cur.students.map(s=>`
+    <div class="stu"><div>${esc(s.name)}<small>Roll ${esc(s.roll)}</small></div>
+    <div class="tog">
+      <button class="p ${marks[s.roll]==='P'?'on':''}" onclick="setM('${esc(s.roll)}','P')">P</button>
+      <button class="a ${marks[s.roll]==='A'?'on':''}" onclick="setM('${esc(s.roll)}','A')">A</button>
+    </div></div>`).join('') : '<p class="mute">No students yet — add some below.</p>';
+}
+function setM(r,v){ marks[r]=v; draw(); }
+function markAll(v){ cur.students.forEach(s=>marks[s.roll]=v); draw(); }
+function saveDay(){
+  const d=$('date').value; if(!d) return msg('tMsg','Pick a date.','err');
+  const missing = cur.students.filter(s=>!marks[s.roll]).length;
+  if (missing && !confirm(`${missing} student(s) not marked. They will be saved as Absent. Continue?`)) return;
+  cur.records[d] = Object.fromEntries(cur.students.map(s=>[s.roll, marks[s.roll]||'A']));
+  save(); msg('tMsg',`Saved for ${d}. Remember to Publish so students can see it.`,'ok');
+}
+
+async function publish(){
+  if (!cur) return;
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const entries = {};
+  for (const s of cur.students){
+    const records = {};
+    Object.entries(cur.records).forEach(([d,m])=>{ if(m[s.roll]) records[d]=m[s.roll]; });
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveKey(cur.pass, s.roll, salt);
+    const ct = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, enc.encode(JSON.stringify({name:s.name, records}))));
+    entries[await sha(cur.code+':'+s.roll)] = {iv:b64(iv), ct:b64(ct)};
+  }
+  const out = {course:cur.name, updated:new Date().toLocaleDateString('en-CA'), salt:b64(salt), entries};
+  download(`${cur.code}.json`, JSON.stringify(out));
+  msg('tMsg',`Downloaded ${cur.code}.json — upload it to the "data" folder in your GitHub repo.`,'ok');
+}
+function download(name, text){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'application/json'})); a.download=name; a.click();
+}
+function backup(){ download('attendance-backup.json', JSON.stringify(DB)); }
+function restore(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.courses) throw 0; if(!confirm('Replace current data with this backup?')) return; DB=d; save(); renderCourses(); }catch{ alert('Not a valid backup file.'); } };
+  r.readAsText(f);
+}
+</script>
+</body>
+</html>
